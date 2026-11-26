@@ -504,6 +504,33 @@ class FeedItem(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow)
 
 
+class MagnetLink(SQLModel, table=True):
+    """订阅源条目携带的磁力链接. 按番号与影片条目关联, 生命周期不随订阅源.
+
+    ``(number, info_hash)`` 与 ``(number, url)`` 双唯一: 同一 torrent 的 tracker 变体只保留一行,
+    没有 info hash 的链接按完整 URL 去重. 删除订阅源只清空 ``feed_id``, 不删除行.
+    """
+
+    __tablename__ = "magnet_links"  # type: ignore[assignment]
+    __table_args__ = (
+        UniqueConstraint("number", "info_hash", name="uq_magnet_links_number_info_hash"),
+        UniqueConstraint("number", "url", name="uq_magnet_links_number_url"),
+        Index("ix_magnet_links_number_published", "number", text("coalesce(published_at, created_at)"), "id"),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    number: str = Field(sa_column=Column(String(collation="NOCASE"), nullable=False))
+    """关联的番号; 大小写不敏感, 存库保留解析结果的大小写."""
+    url: str = Field(nullable=False)
+    info_hash: str | None = None
+    """``xt=urn:btih:`` 归一后的十六进制; 缺失或非法时为 None."""
+    title: str | None = None
+    """订阅源条目的标题."""
+    feed_id: int | None = Field(default=None, foreign_key="feeds.id", index=True)
+    published_at: datetime | None = None
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
 class Resource(SQLModel, table=True):
     """一等存储 (非 LRU). url 为 locator: 外部图用真实 URL; 裁剪派生用
     ``derived:{sha256(src_url)}:crop:{args}`` (args 为右侧比或 ``box:L,T,R,B``).

@@ -7,6 +7,7 @@ import pytest_asyncio
 from PIL import Image
 
 from amane.db.models import MediaFileStatus, Metadata, TaskType
+from amane.db.repo_types import MagnetLinkInput
 from amane.enums import ActorGender
 
 if TYPE_CHECKING:
@@ -479,3 +480,46 @@ class TestMetadataPatch:
             assert resp.status_code == 422, payload
         detail = (await client.get(f"metadata/{meta.id}")).json()["metadata"]
         assert detail["title"] == "原标题"
+
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_detail_includes_magnets(client: AsyncClient, repo: Repository):
+    """详情返回按番号关联的磁力链接; 列表项不携带."""
+    meta = await repo.upsert_metadata(number="MAG-001")
+    assert meta.id is not None
+    feed = await repo.create_feed(name="bt4g", url="https://example.com/magnet.xml")
+    assert feed.id is not None
+    await repo.upsert_magnet_links(
+        feed.id,
+        [
+            MagnetLinkInput(
+                number="MAG-001",
+                url="magnet:?xt=urn:btih:b0920b07e8457b73274b39a1745455c76dd2b7d5&dn=MAG-001",
+                info_hash="b0920b07e8457b73274b39a1745455c76dd2b7d5",
+                title="MAG-001 file",
+                published_at=None,
+            )
+        ],
+    )
+
+    detail = (await client.get(f"metadata/{meta.id}")).json()
+    assert detail["magnets"] == [
+        {
+            "id": detail["magnets"][0]["id"],
+            "url": "magnet:?xt=urn:btih:b0920b07e8457b73274b39a1745455c76dd2b7d5&dn=MAG-001",
+            "title": "MAG-001 file",
+            "feed_name": "bt4g",
+            "info_hash": "b0920b07e8457b73274b39a1745455c76dd2b7d5",
+            "published_at": None,
+        }
+    ]
+    listed = (await client.get("metadata?search=MAG-001")).json()["items"][0]
+    assert "magnets" not in listed
+
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_detail_without_magnets_returns_empty_list(client: AsyncClient, repo: Repository):
+    meta = await repo.upsert_metadata(number="MAG-002")
+    assert meta.id is not None
+    detail = (await client.get(f"metadata/{meta.id}")).json()
+    assert detail["magnets"] == []

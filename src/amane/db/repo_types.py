@@ -371,6 +371,16 @@ class FeedUpdates(TypedDict, total=False):
     last_enqueued: int
 
 
+class MagnetLinkInput(TypedDict):
+    """订阅源条目中待写入的磁力链接; ``info_hash`` 缺失时按完整 URL 去重."""
+
+    number: str
+    url: str
+    info_hash: str | None
+    title: str | None
+    published_at: datetime | None
+
+
 class ActorPersonFields(TypedDict, total=False):
     """人物可写字段; 不含 name/id."""
 

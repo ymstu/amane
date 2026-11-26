@@ -99,6 +99,10 @@
       "sourceUrls": "来源链接"
     },
     "connections": "关联文件",
+    "magnets": "磁力链接",
+    "copyMagnet": "复制磁力链接",
+    "magnetCopied": "已复制",
+    "openMagnet": "用 BT 客户端打开",
     "noFiles": "无关联文件",
     "openInLibrary": "在媒体库中查看",
     "userTags": "用户标签",

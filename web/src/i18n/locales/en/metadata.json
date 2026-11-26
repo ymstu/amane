@@ -100,6 +100,10 @@
       "sourceUrls": "Source Links"
     },
     "connections": "Related Files",
+    "magnets": "Magnet links",
+    "copyMagnet": "Copy magnet link",
+    "magnetCopied": "Copied",
+    "openMagnet": "Open in torrent client",
     "noFiles": "No related files",
     "openInLibrary": "Open in library",
     "userTags": "User tags",

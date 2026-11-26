@@ -124,11 +124,23 @@ class MetadataListResponse(BaseModel):
     semantic_hits: list[SemanticHitInfo] = Field(default_factory=list)
 
 
+class MagnetLinkResponse(BaseModel):
+    """影片条目关联的磁力链接; 来自订阅源, 源删除后仍保留."""
+
+    id: int
+    url: str
+    title: str | None = None
+    feed_name: str | None = None
+    info_hash: str | None = None
+    published_at: datetime | None = None
+
+
 class MetadataDetailResponse(BaseModel):
     metadata: MetadataResponse
     files: list[MediaFileResponse]
     user_tags: list[UserTagResponse] = []
     comments: list[CommentResponse] = []
+    magnets: list[MagnetLinkResponse] = []
     actor_ids: dict[str, int] = {}
     actor_genders: dict[str, ActorGender] = {}
     director_ids: dict[str, int] = {}

@@ -2464,6 +2464,38 @@ export type LoggingConfig = {
 };
 
 /**
+ * MagnetLinkResponse
+ *
+ * 影片条目关联的磁力链接; 来自订阅源, 源删除后仍保留.
+ */
+export type MagnetLinkResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Url
+     */
+    url: string;
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Feed Name
+     */
+    feed_name?: string | null;
+    /**
+     * Info Hash
+     */
+    info_hash?: string | null;
+    /**
+     * Published At
+     */
+    published_at?: string | null;
+};
+
+/**
  * Manufacturer
  */
 export type Manufacturer = 'attackers' | 'befree' | 'bi' | 'bibian' | 'das' | 'ebody' | 'fitch' | 'hajime_kikaku' | 'honnaka' | 'hunter' | 'idea_pocket' | 'kawaii' | 'kirakira' | 'madonna' | 'miman' | 'mko_labo' | 'moodyz' | 'muku' | 'mvg' | 'nanpa_japan' | 'oppai' | 'opera' | 'premium_beauty' | 'rookie' | 's1' | 'tameikegoro' | 'tosatsu' | 'v' | 'wanz_factory';
@@ -2762,6 +2794,10 @@ export type MetadataDetailResponse = {
      * Comments
      */
     comments?: Array<CommentResponse>;
+    /**
+     * Magnets
+     */
+    magnets?: Array<MagnetLinkResponse>;
     /**
      * Actor Ids
      */

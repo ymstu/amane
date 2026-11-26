@@ -60,6 +60,7 @@ from .media import (
 from .metadata import (
     CropPosterRequest,
     FilePhaseSummary,
+    MagnetLinkResponse,
     MergeRequest,
     MetadataBatchDeleteResponse,
     MetadataBatchIdsRequest,
@@ -179,6 +180,7 @@ __all__ = [
     "LibraryListResponse",
     "LibraryResponse",
     "LibraryUpdateRequest",
+    "MagnetLinkResponse",
     "MediaBatchDeleteRequest",
     "MediaBatchDeleteResponse",
     "MediaFileResponse",

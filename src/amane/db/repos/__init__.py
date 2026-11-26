@@ -5,6 +5,7 @@ from .base import RepositoryMixinBase
 from .facets import FacetsRepoMixin
 from .feeds import FeedsRepoMixin
 from .libraries import LibrariesRepoMixin
+from .magnets import MagnetsRepoMixin
 from .media import MediaRepoMixin
 from .metadata import MetadataRepoMixin
 from .schedules import SchedulesRepoMixin
@@ -15,6 +16,7 @@ __all__ = [
     "FacetsRepoMixin",
     "FeedsRepoMixin",
     "LibrariesRepoMixin",
+    "MagnetsRepoMixin",
     "MediaRepoMixin",
     "MetadataRepoMixin",
     "RepositoryMixinBase",

@@ -12,10 +12,11 @@ import structlog
 
 from ..db.feed_keywords import item_matches_ignore_keywords
 from ..db.models import TaskType
+from ..db.repo_types import MagnetLinkInput
 from ..handlers.models import build_feed_scrape_payload
 from ..net.errors import RequestError
 from ..net.http import WebClient
-from ..parsing import extract_number
+from ..parsing import extract_number, magnet_info_hash
 from .rss import ParsedFeedEntry, parse_feed_bytes
 
 if TYPE_CHECKING:
@@ -231,6 +232,22 @@ class FeedService:
                 # 已入队的条目无需再阅读, 直接记为已读, 免得未读角标被自动流程产生的条目撑满.
                 read=entry.item_key in enqueue_numbers,
             )
+
+        magnets: list[MagnetLinkInput] = []
+        for entry, number in new_entries:
+            if number is None or entry.magnet is None or ignored_by_key[entry.item_key]:
+                continue
+            magnets.append(
+                MagnetLinkInput(
+                    number=number,
+                    url=entry.magnet,
+                    info_hash=magnet_info_hash(entry.magnet),
+                    title=entry.title or None,
+                    published_at=entry.published_at,
+                )
+            )
+        if magnets:
+            await self._repo.upsert_magnet_links(feed_id, magnets)
 
         for number in enqueue_numbers.values():
             await self._repo.create_task(

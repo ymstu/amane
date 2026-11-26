@@ -23,6 +23,7 @@ class Repository(
     repos.FacetsRepoMixin,
     repos.FeedsRepoMixin,
     repos.LibrariesRepoMixin,
+    repos.MagnetsRepoMixin,
     repos.MediaRepoMixin,
     repos.MetadataRepoMixin,
     repos.SchedulesRepoMixin,

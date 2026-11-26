@@ -15,6 +15,7 @@ class ParsedFeedEntry:
     link: str | None
     description: str | None
     published_at: datetime | None = None
+    magnet: str | None = None
 
 
 @dataclass(frozen=True)
@@ -63,6 +64,23 @@ def _struct_to_utc(value: object) -> datetime | None:
         return None
 
 
+def _entry_magnet(entry: feedparser.FeedParserDict) -> str | None:
+    """取条目的磁力链接: ``link`` 本身, 或 ``links`` / ``enclosures`` 中的 href.
+
+    只认 ``magnet:`` 前缀; 普通网页链接留在 ``link``, 不参与磁力关联.
+    """
+    candidates: list[object] = [entry.get("link")]
+    for key in ("links", "enclosures"):
+        blocks = entry.get(key)
+        if not isinstance(blocks, list):
+            continue
+        candidates.extend(block.get("href") for block in blocks if isinstance(block, dict))
+    for value in candidates:
+        if isinstance(value, str) and value.strip().lower().startswith("magnet:"):
+            return value.strip()
+    return None
+
+
 def _entry_published_at(entry: feedparser.FeedParserDict) -> datetime | None:
     """RSS pubDate / Atom published, 没有再用 updated. feedparser 已把二者解析成 UTC struct_time.
 
@@ -97,6 +115,7 @@ def parse_feed_bytes(body: bytes) -> ParsedFeed | None:
                 link=link,
                 description=description,
                 published_at=_entry_published_at(entry),
+                magnet=_entry_magnet(entry),
             )
         )
     return ParsedFeed(title=title, entries=result)
