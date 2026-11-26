@@ -88,6 +88,10 @@
 
 **javbus** 是 FANZA 目录映射 + 磁力; **jav321 / r18dev / 多数 javlibrary 类站** 是同一 FANZA 目录的镜像或离线快照; **javdb** 见上文独立层. 中文站 (iqqtv / airav) 有自己的剧情翻译, 底本仍是日文柜台文案. 综合索引 javdb / javbus **不解析 plot**, 长简介来自柜台、中文站与专用源.
 
+## 海报补充源
+
+**amazon.co.jp** — 不在默认类型路由内: 只有 `scraping.hd_poster` 开启且类型为有码时, `ScrapeHandler` 在聚合后直接调用 `AmazonCrawler`. 番号在アダルトDVD 目录 (`rh=n:896246`) 检索, 结果不能直接当命中 — 无关商品会排在前面, 必须进商品页按 `製造元リファレンス` 或刮削标题确认 (部分商品页缺该字段). 商品页命中黑帘时先经 `/black-curtain/save-eligibility/black-curtain` 领取会话再取页; 主图去掉缩放后缀才是原图. 命中图前插到 `poster_urls`; 未命中与请求失败都静默回退, 不写站点失败也不落 raw 快照.
+
 ## 覆盖缺口
 
 **javdb 国产**: 国产路由以 iqqtv 为第一源, javdb 只当搜得到就用的兜底. **javdb 欧美**: 欧美不是主库存, 编号形态与 JAV 番号不同, 地域拦截时无法核列表; 欧美默认第一源为 theporndb, 未接入的 AVHEAT 优先级仍低于它.

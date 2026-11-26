@@ -123,6 +123,7 @@ handler 之间复用的阶段逻辑, 不是一条可跳步的总管线:
 
 `ScrapeHandler` 在聚合后、`upsert_metadata` 前调用 `materialize_images` (`src/amane/media/pipeline.py`) — 二进制写入 Resource 目录的主路径, 与是否整理无关:
 
+- **日亚高清海报**: 有码且 `scraping.hd_poster` 时, 聚合后直接调用 `AmazonCrawler` 把命中图前插到 `poster_urls`; 未命中或失败静默跳过, 不计入 `failed_sites`, 不落 raw 快照. 调用在翻译与 `materialize_images` 之前, 命中图因此先于既有候选被下载.
 - **`scraping.download_resources`** 控制本步下载哪些类型 (thumb / poster / extrafanart / trailer).
 - **候选按序尝试, 命中即停**: 候选是同一张图的回退链, 首选成功后再下载后续地址只会把它在 Resource 里存成多份. 命中的那个置首位, 其余候选 (下载失败与未尝试) 保序留在尾部, 来源恢复后下次物化可重新尝试; 全部失败时列表保持原序. 未选中下载的类型无成败信息, 保持聚合优先级原序; extrafanart 为站点分组 dict, 不重排. `raw` 快照保持站点原始数据.
 - 裁剪海报 → 有码与无码按 `scraping.poster_ratio` 从 thumb 右侧裁切; 超分就地覆盖. 失败不阻断刮削.
