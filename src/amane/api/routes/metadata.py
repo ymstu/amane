@@ -23,6 +23,7 @@ from ..models import (
     CommentResponse,
     CropPosterRequest,
     FilePhaseSummary,
+    MagnetLinkResponse,
     MergeRequest,
     MetadataBatchDeleteResponse,
     MetadataBatchIdsRequest,
@@ -307,6 +308,7 @@ async def get_metadata(metadata_id: int, repo: RepoDep) -> MetadataDetailRespons
     files = await repo.get_media_by_metadata_id(metadata_id)
     user_tags = await repo.list_metadata_user_tags(metadata_id)
     comments = await repo.list_comments(metadata_id)
+    magnets = await repo.list_magnets_for_number(metadata.number)
     (
         actor_ids,
         actor_genders,
@@ -328,6 +330,10 @@ async def get_metadata(metadata_id: int, repo: RepoDep) -> MetadataDetailRespons
         files=[to_media_file_response(f, metadata.content_type) for f in files],
         user_tags=[to_resp(UserTagResponse, t) for t in user_tags],
         comments=[to_resp(CommentResponse, c) for c in comments],
+        magnets=[
+            to_resp(MagnetLinkResponse, magnet).model_copy(update={"feed_name": feed_name})
+            for magnet, feed_name in magnets
+        ],
         actor_ids=actor_ids,
         actor_genders=actor_genders,
         director_ids=director_ids,

@@ -27,6 +27,7 @@ from .file_info import (
     split_number,
     summarize_file_phases,
 )
+from .magnet import is_magnet_uri, magnet_info_hash
 
 __all__ = [
     "CONTENT_TYPE_VALUES",
@@ -47,8 +48,10 @@ __all__ = [
     "file_phase_from_path",
     "infer_content_type",
     "is_amateur",
+    "is_magnet_uri",
     "is_uncensored",
     "is_vr",
+    "magnet_info_hash",
     "max_definition",
     "mosaic_nature",
     "parse_file_info",

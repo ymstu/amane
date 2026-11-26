@@ -55,6 +55,47 @@ ATOM_ONE = b"""<?xml version="1.0"?>
 </feed>
 """
 
+_MAGNET_HEX = "b0920b07e8457b73274b39a1745455c76dd2b7d5"
+_MAGNET_OTHER = "67dcd3b15d122a3768622e11cb3582c6b790fc53"
+
+MAGNET_RSS = f"""<?xml version="1.0"?>
+<rss version="2.0">
+  <channel>
+    <title>Magnet</title>
+    <item>
+      <guid>m-link</guid>
+      <title>ABF-371 Ltx</title>
+      <link>magnet:?xt=urn:btih:{_MAGNET_HEX}&amp;dn=abf-371_Ltx.mp4</link>
+    </item>
+    <item>
+      <guid>m-same-hash</guid>
+      <title>ABF-371 again</title>
+      <link>magnet:?xt=urn:btih:{_MAGNET_HEX.upper()}&amp;dn=other&amp;tr=udp%3A%2F%2Ftracker.example</link>
+    </item>
+    <item>
+      <guid>m-enclosure</guid>
+      <title>DPMI-015</title>
+      <enclosure url="magnet:?xt=urn:btih:{_MAGNET_OTHER}&amp;dn=DPMI-015" length="0" type="application/x-bittorrent"/>
+    </item>
+    <item>
+      <guid>m-no-number</guid>
+      <title>no number here</title>
+      <link>magnet:?xt=urn:btih:{_MAGNET_HEX}&amp;dn=no-number</link>
+    </item>
+    <item>
+      <guid>m-ignored</guid>
+      <title>IGN-001 skip</title>
+      <link>magnet:?xt=urn:btih:{_MAGNET_OTHER}&amp;dn=ignored</link>
+    </item>
+    <item>
+      <guid>m-web</guid>
+      <title>WEB-001 page</title>
+      <link>https://example.com/WEB-001</link>
+    </item>
+  </channel>
+</rss>
+""".encode()
+
 
 class FakeResp:
     def __init__(self, status_code: int, content: bytes = b"", headers: dict[str, str] | None = None) -> None:
@@ -588,3 +629,84 @@ async def test_poll_does_not_overwrite_published_at(repo: Repository):
     rows, _ = await repo.list_feed_items(feed.id, state="all")
     by_key = {item.item_key: item for item, _ in rows}
     assert _as_utc(by_key["new"].published_at) == original
+
+
+def test_parse_magnet_from_link_and_enclosure():
+    parsed = parse_feed_bytes(MAGNET_RSS)
+    assert parsed is not None
+    by_key = {entry.item_key: entry for entry in parsed.entries}
+    assert by_key["m-link"].magnet == f"magnet:?xt=urn:btih:{_MAGNET_HEX}&dn=abf-371_Ltx.mp4"
+    assert by_key["m-enclosure"].magnet == f"magnet:?xt=urn:btih:{_MAGNET_OTHER}&dn=DPMI-015"
+    assert by_key["m-web"].magnet is None
+
+
+@pytest.mark.asyncio
+async def test_poll_persists_magnets_independent_of_auto_enqueue(repo: Repository):
+    feed = await repo.create_feed(name="bt4g", url="https://example.com/magnet.xml", auto_enqueue=False)
+    assert feed.id is not None
+    await _service(repo, FakeWeb(FakeResp(200, MAGNET_RSS))).poll_one(feed.id)
+
+    rows = await repo.list_magnets_for_number("ABF-371")
+    assert len(rows) == 1
+    magnet, feed_name = rows[0]
+    assert magnet.info_hash == _MAGNET_HEX
+    assert magnet.title == "ABF-371 Ltx"
+    assert magnet.feed_id == feed.id
+    assert feed_name == "bt4g"
+    assert magnet.url.startswith("magnet:?xt=urn:btih:")
+
+    other = await repo.list_magnets_for_number("dpmi-015")
+    assert len(other) == 1
+    assert other[0][0].info_hash == _MAGNET_OTHER
+
+
+@pytest.mark.asyncio
+async def test_poll_skips_magnets_for_ignored_and_numberless_items(repo: Repository):
+    feed = await repo.create_feed(
+        name="bt4g",
+        url="https://example.com/magnet.xml",
+        auto_enqueue=False,
+        ignore_keywords=["skip"],
+    )
+    assert feed.id is not None
+    await _service(repo, FakeWeb(FakeResp(200, MAGNET_RSS))).poll_one(feed.id)
+
+    assert await repo.list_magnets_for_number("IGN-001") == []
+    assert await repo.list_magnets_for_number("WEB-001") == []
+
+
+@pytest.mark.asyncio
+async def test_poll_dedupes_same_torrent_across_feeds(repo: Repository):
+    first = await repo.create_feed(name="first", url="https://example.com/first.xml", auto_enqueue=False)
+    second = await repo.create_feed(name="second", url="https://example.com/second.xml", auto_enqueue=False)
+    assert first.id is not None and second.id is not None
+    await _service(repo, FakeWeb(FakeResp(200, MAGNET_RSS))).poll_one(first.id)
+    await _service(repo, FakeWeb(FakeResp(200, MAGNET_RSS))).poll_one(second.id)
+
+    rows = await repo.list_magnets_for_number("ABF-371")
+    assert len(rows) == 1
+    assert rows[0][0].feed_id == first.id
+
+
+@pytest.mark.asyncio
+async def test_poll_does_not_duplicate_magnets_on_second_fetch(repo: Repository):
+    feed = await repo.create_feed(name="bt4g", url="https://example.com/magnet.xml", auto_enqueue=False)
+    assert feed.id is not None
+    service = _service(repo, FakeWeb(FakeResp(200, MAGNET_RSS)))
+    await service.poll_one(feed.id)
+    await service.poll_one(feed.id)
+    assert len(await repo.list_magnets_for_number("ABF-371")) == 1
+
+
+@pytest.mark.asyncio
+async def test_delete_feed_keeps_magnets(repo: Repository):
+    feed = await repo.create_feed(name="bt4g", url="https://example.com/magnet.xml", auto_enqueue=False)
+    assert feed.id is not None
+    await _service(repo, FakeWeb(FakeResp(200, MAGNET_RSS))).poll_one(feed.id)
+
+    assert await repo.delete_feed(feed.id) is True
+    rows = await repo.list_magnets_for_number("ABF-371")
+    assert len(rows) == 1
+    magnet, feed_name = rows[0]
+    assert magnet.feed_id is None
+    assert feed_name is None

@@ -72,6 +72,7 @@ OpenAPI 列出参数, 不表达组合语义:
 **错误**: `HTTPException(detail=中文)`. 路径校验位于 `support/path_validation.py` (存在 / 类型 / `safe_dirs` → 400 / 403 / 404; `ALLOW_ALL` 时跳过边界层). `/files` 的失败映射: 不存在 → 404, 不在 `safe_dirs` → 403, 空名单 → 500, `os.scandir` 的 `OSError` (含网络盘挂载失效) → 500 + strerror detail, `PermissionError` → 403. 错误日志统一由 LoggingMiddleware 打点 (见 [observability.md](observability.md)), handler 内不自行打印.
 
 **列表**: `media` / `metadata` / `tasks` / `facets` / `actors` 同构 `offset` + `limit` + `sort_by` + `order`, 响应 `{items, total}`; `sort_by` 是各资源 `*SortField` 枚举, 显式映射到列或计算表达式 (片库评分按 `scores` 首值, 与响应 `score` 同源), 禁止反射列名. 清理清单的 `cleanup/inventory/nodes` 同样分页, 顺序由树决定, 因此没有排序参数 (见 [task-system.md](task-system.md)). `libraries` / `schedules` / `feeds` 全量无分页. `GET /metadata` 列表项不含 `raw` / `field_sources` (详情才有); `GET /actors` 列表项不填简介 / 别名 / 用户标签 / 源字典 / `raw` (详情仍全量); `GET /tasks` 与其 `/children` 同样不带 `payload` 与 `result`, 展开单个任务时才取详情.
+- `GET /metadata/{id}` 详情额外返回 `magnets`: 按番号 (大小写不敏感) 关联的订阅源磁力链接, 新发布的在前 (缺 `published_at` 回退 `created_at`), 最多 20 条; `feed_name` 取来源当前名称, 源已删除时为空; 列表项不携带. 数据来源与去重见 [data-model.md](data-model.md)「磁力链接」.
 
 **状态码**: 创建 201、任务入队 202、无返回体 204; 空 PATCH / 非法 cron → 422; 任务状态不允许的 record → 409.
 

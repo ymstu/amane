@@ -17,6 +17,7 @@
 | `Library` | 媒体库: 根目录 + 路径模板 + 整理方式 + 自动化级别 | `id` |
 | `Feed` | 远程 RSS / Atom 发现源 (间隔与刮削属性按源绑定; 分组是字符串伪路径, 不建目录表) | `url` UNIQUE |
 | `FeedItem` | 某源曾见过的条目 (去重 + 历史 + 阅读器正文快照) | `(feed_id, item_key)` UNIQUE |
+| `MagnetLink` | 订阅源条目携带的磁力链接, 按番号关联影片 | `(number, info_hash)` 与 `(number, url)` 各 UNIQUE |
 | `Schedule` | cron 触发器 | `id` |
 | `Actor` / `Director` | 人物一等实体 (`Actor` 承载人物元数据; `Director` 预留) | `name` UNIQUE |
 | `Tag` / `Studio` / `Publisher` / `Series` | 爬取侧分类目录 | `name` UNIQUE |
@@ -32,6 +33,10 @@
 Metadata 列表与 `/media` 文件行的角标与筛选: 有码 / 无码取条目类型 (没有挂载文件也成立), 无码再并上「存在无码标记的文件」; 中字 / 分辨率 / 破解 / 流出按关联 EXISTS 或页级聚合 (`file_phase`) 判定, 任一挂载文件具备即亮, `definition` 取最高档; 布尔取值的口径见 [api.md](api.md). 文件行同样返回派生的 `censored` / `uncensored`: `censored` 取这一份文件的性质 (带无码标记的副本不算有码), `uncensored` 与列表筛选同口径, 未绑定条目的文件只看自身标记. VR 标识与 `GET /metadata` 的 `vr` 筛选不来自文件相位, 也不物化: 只依据 `Metadata.tags` 与 `parsing/file_info.py::VR_TAGS` 的整体相等判定, 番号不参与; Python 与 SQL 两侧共用同一份词表 (`db/models.py::metadata_vr_predicate`, 用法同 `has_subtitle_predicate`), 因此重命名 / 合并标签后判定立即变化, 无需回填. 代价是判定随 `tags` 的单源取值: 字段链首个非空站点不给 VR 标签的条目判为否.
 
 马赛克性质 (`parsing/file_info.py::MosaicNature`) 是**展示口径**, 不落库: 词表标记优先, 没命中时继承条目类型的有码 / 无码 (HEYZO 等无标记的无码番因此也显示无码), 其余类型为空. 模板占位符 `{mosaic?}` 输出它 (`{content_type}` 输出条目类型), 因此 `censored=` 是合法映射键; 筛选参数与列仍只有标记三个取值.
+
+## 磁力链接
+
+`MagnetLink` 是订阅源条目中 `magnet:` 链接的持久副本, 与 `FeedItem` 解耦: 拉取时按条目番号写入, 之后删除源或条目历史都不删除它, 只把 `feed_id` 置空, 影片详情因此不依赖订阅源仍存在. 唯一键按 `(number, info_hash)` 与 `(number, url)` 双重去重 — `info_hash` 由 `xt=urn:btih:` 的十六进制 / base32 归一, 同一 torrent 的不同 tracker 参数只留首次一行; 番号比较大小写不敏感. 只收录有番号且未命中 `ignore_keywords` 的条目, 无番号条目无法关联影片因而不写入. 去重判定与写入在同一写锁内, 并发拉取同一 torrent 仍只留一行.
 
 ## Library 归属
 
@@ -94,10 +99,10 @@ PATCH 三态: **省略键** = 不更新 (`exclude_unset`); **显式值** = 写�
 | 操作 | 级联行为 | 后果 |
 |------|---------|------|
 | `MediaFile` 删除 | 不级联 Metadata | Metadata 是一等公民; 文件索引消失不影响元数据条目 |
-| `Metadata` 删除 | **nullify** `MediaFile.metadata_id`, 状态回 `PENDING` | 应用层级联 (`delete_metadata`); 文件本身保留, 可再刮削 |
+| `Metadata` 删除 | **nullify** `MediaFile.metadata_id`, 状态回 `PENDING` | 应用层级联 (`delete_metadata`); 文件本身保留, 可再刮削. 磁力链接按番号独立保存, 不随条目删除 |
 | `Metadata` 合并 | 来源的 `MediaFile` / `Comment` / `MetadataUserTag` 改挂 target 并去重, 分类投影与来源条目删除 | `merge_metadata_entries`; target 字段与锁定不变, `raw` 只补目标缺失的站点 (来源之间按传入顺序), 不重新聚合; 请求的 `rescrape` 在合并提交后对目标番号入队 SCRAPE (复用 raw 缓存), 由聚合按当前优先级重建字段与站点级字典 |
 | `Library` 删除 | **级联删除** `MediaFile` | 应用层级联 (`delete_library` 先 flush 删子表再删库, 无 ORM relationship). 仅删 DB 索引, 不动磁盘文件; 路由层同时 `remove_library` 停止监控 |
-| `Feed` 删除 | **级联删除** `FeedItem` | 应用层级联; 已入队的 SCRAPE / Metadata 不受影响 |
+| `Feed` 删除 | **级联删除** `FeedItem`; 磁力链接只把 `feed_id` 置空 | 应用层级联; 已入队的 SCRAPE / Metadata 不受影响, 磁力链接仍留在影片详情页 |
 | `UserTag` 删除 | **级联删除**两张关联表的挂载行 | 应用层级联 (不依赖 FK pragma); 合并用户标签时源标签的挂载先迁入 target 再删实体 |
 | `Actor` 删除 / 合并 | 删除其标签挂载行; 合并时源演员的挂载并入 target | 应用层级联, 与别名行同处处理 |
 | `Resource` 清理 | CLEANUP 回收未引用 | 扫描全部 Metadata 媒体 URL 字段与 `Actor.image_urls`, 删不被引用的 Resource (文件 + 行). 非 LRU |

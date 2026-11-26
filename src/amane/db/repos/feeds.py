@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from ...parsing import ContentType
 from ...utils.collections import unique_ids
 from ..feed_keywords import item_matches_ignore_keywords
-from ..models import Feed, FeedItem, FeedItemReadState, FeedItemState, Metadata
+from ..models import Feed, FeedItem, FeedItemReadState, FeedItemState, MagnetLink, Metadata
 from ..repo_types import FeedUpdates
 from .base import RepositoryMixinBase
 
@@ -148,7 +148,7 @@ class FeedsRepoMixin(RepositoryMixinBase):
             return {fid: int(n) for fid, n in (await session.exec(stmt)).all() if fid is not None}
 
     async def delete_feed(self, feed_id: int) -> bool:
-        """须同时删除 FeedItem, 否则留下悬空 FK."""
+        """须同时删除 FeedItem, 否则留下悬空 FK; 磁力链接只解除来源关联."""
         async with self._session() as session:
             feed = await session.get(Feed, feed_id)
             if feed is None:
@@ -156,6 +156,7 @@ class FeedsRepoMixin(RepositoryMixinBase):
             items = list((await session.exec(select(FeedItem).where(FeedItem.feed_id == feed_id))).all())
             for item in items:
                 await session.delete(item)
+            await session.exec(sqla_update(MagnetLink).where(col(MagnetLink.feed_id) == feed_id).values(feed_id=None))
             await session.flush()
             await session.delete(feed)
             await session.commit()

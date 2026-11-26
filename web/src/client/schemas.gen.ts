@@ -5075,6 +5075,71 @@ export const LoggingConfigSchema = {
     title: 'LoggingConfig'
 } as const;
 
+export const MagnetLinkResponseSchema = {
+    properties: {
+        id: {
+            type: 'integer',
+            title: 'Id'
+        },
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        feed_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Feed Name'
+        },
+        info_hash: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Info Hash'
+        },
+        published_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Published At'
+        }
+    },
+    type: 'object',
+    required: [
+        'id',
+        'url'
+    ],
+    title: 'MagnetLinkResponse',
+    description: '影片条目关联的磁力链接; 来自订阅源, 源删除后仍保留.'
+} as const;
+
 export const ManufacturerSchema = {
     type: 'string',
     enum: [
@@ -5618,6 +5683,14 @@ export const MetadataDetailResponseSchema = {
             },
             type: 'array',
             title: 'Comments',
+            default: []
+        },
+        magnets: {
+            items: {
+                $ref: '#/components/schemas/MagnetLinkResponse'
+            },
+            type: 'array',
+            title: 'Magnets',
             default: []
         },
         actor_ids: {

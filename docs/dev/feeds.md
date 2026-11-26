@@ -4,7 +4,7 @@
 
 ## 定位
 
-`Feed` 是远程目录事件源, 与 `Library` + Watcher (本地目录事件) 并列. 产物只有 by-number `SCRAPE` (`media_file_id=None`); 不下载 enclosure / 种子, 不写入 Library, 文件之后出现仍由 Watcher 关联 MediaFile.
+`Feed` 是远程目录事件源, 与 `Library` + Watcher (本地目录事件) 并列. 产物是 by-number `SCRAPE` (`media_file_id=None`) 与条目携带的磁力链接 (见下); 不下载 enclosure / 种子, 不写入 Library, 文件之后出现仍由 Watcher 关联 MediaFile.
 
 **不是** `Schedule`: Schedule 是用户 routine → 入队 Task 并占用 Worker, Feed 拉取是生产者, 间隔写在源上 (`interval_seconds` + `next_fetch_at`), 不纳入 HotSettings, 不并入 `CronScheduler`.
 
@@ -46,6 +46,10 @@
 - `scrape`: 按当前 Feed 的 `content_type` / `use_cache` 为有番号条目创建番号级 SCRAPE; 同批次番号大小写不敏感去重, 无番号计入 `skipped`, 手动任务优先级为 `0`. 配置在任务创建时写入 payload, 后续修改 Feed 不影响已入队任务.
 
 阅读器 (`/feeds`) 只消费条目, 源 CRUD 在 `/feeds/sources`; 被忽略条目仍允许手动刮削, 无番号仍可参与批量操作 (由后端计入 `skipped`). FeedItem 没有独立于 batch action 的手动刮削端点.
+
+## 磁力链接
+
+条目 `link` / `links` / `enclosures` 中的 `magnet:` 在拉取时按番号写入 `MagnetLink`, 与 `FeedItem` 解耦: 不随条目历史或源删除消失, 删源只把 `feed_id` 置空. `auto_enqueue` 不影响写入; 无番号与命中 `ignore_keywords` 的条目跳过. 同一 `(number, info_hash)` (十六进制 / base32 归一) 或 `(number, url)` 只留一行, 跨源并发也成立. 只在条目首次写入时处理, 存量由迁移回填; 因此后来改 `number_pattern` 不会重算旧条目的磁力关联. 生命周期与去重口径见 [data-model.md](data-model.md)「磁力链接」.
 
 ## 每源刮削配置
 
