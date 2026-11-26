@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from amane.aggregate import AggregatedMetadata
 from amane.config import HotSettings, ScrapingConfig
-from amane.crawlers.models import MediaMetadata
+from amane.crawlers.models import MediaMetadata, SearchQuery
 from amane.db.models import MediaFileStatus, Task, TaskStatus, TaskType
 from amane.enums import MetadataField, SiteName
 from amane.handlers import CacheKind, RefreshHandler, RefreshPayload, ScanMode, ScrapeHandler, ScrapePayload
@@ -435,12 +435,16 @@ class RecordingFactory:
         self.requested = list(names)
         return {n: self._available[n] for n in names if n in self._available}
 
+    async def get(self, name):
+        return self._available.get(name)
 
-def _config_with(routes, field_priority=None, field_blacklist=None):
+
+def _config_with(routes, field_priority=None, field_blacklist=None, hd_poster=False):
     scraping = ScrapingConfig(
         content_routes=routes,
         field_priority=field_priority or {},
         field_blacklist=field_blacklist or {},
+        hd_poster=hd_poster,
     )
     return HotSettings(scraping=scraping)
 
@@ -534,6 +538,85 @@ class TestContentRoutesFiltering:
         assert metadata.title == "FromDMM"
         assert metadata.studio == "StudioJavDB"
         assert set(factory.requested) == {SiteName.JAVDB, SiteName.DMM}
+
+
+HD_POSTER = "https://m.media-amazon.com/images/I/hd.jpg"
+FALLBACK_POSTER = "https://s/p.jpg"
+
+
+class AmazonPosterCrawler:
+    """日亚替身: 记录调用并按配置返回海报 / 未命中 / 抛错."""
+
+    name = SiteName.AMAZON
+
+    def __init__(self, poster: str | None = HD_POSTER, error: Exception | None = None):
+        self._poster = poster
+        self._error = error
+        self.queries: list[SearchQuery] = []
+
+    async def fetch(self, query, options=None) -> MediaMetadata | None:
+        self.queries.append(query)
+        if self._error is not None:
+            raise self._error
+        if self._poster is None:
+            return None
+        return MediaMetadata(number=query.number, poster_urls=[self._poster])
+
+
+class PosterCrawler:
+    """既有来源: 提供一张保底海报与一个标题."""
+
+    async def fetch(self, query, options=None) -> MediaMetadata | None:
+        return MediaMetadata.model_validate(
+            {"number": query.number, "title": "Mock Title", "poster_urls": [FALLBACK_POSTER]}
+        )
+
+
+class TestHdPoster:
+    @pytest.mark.asyncio(loop_scope="function")
+    @pytest.mark.parametrize(
+        ("hd_poster", "content_type", "amazon", "expected"),
+        [
+            # 命中: 日亚置于首位, 既有来源保底
+            (True, ContentType.CENSORED, AmazonPosterCrawler(), [HD_POSTER, FALLBACK_POSTER]),
+            # 关闭: 不发请求
+            (False, ContentType.CENSORED, AmazonPosterCrawler(), [FALLBACK_POSTER]),
+            # 仅有码
+            (True, ContentType.UNCENSORED, AmazonPosterCrawler(), [FALLBACK_POSTER]),
+            # 未命中与失败都静默回退
+            (True, ContentType.CENSORED, AmazonPosterCrawler(poster=None), [FALLBACK_POSTER]),
+            (True, ContentType.CENSORED, AmazonPosterCrawler(error=RuntimeError("boom")), [FALLBACK_POSTER]),
+        ],
+    )
+    async def test_hd_poster_placement(
+        self, repo: Repository, resource_store, hd_poster, content_type, amazon, expected
+    ):
+        factory = RecordingFactory({str(SiteName.JAVDB): PosterCrawler(), str(SiteName.AMAZON): amazon})
+        config = _config_with({content_type: [SiteName.JAVDB]}, hd_poster=hd_poster)
+        h = ScrapeHandler(repo=repo, factory=factory, resource_store=resource_store, pipeline_config=config)
+
+        media = await repo.create_media_file(library_id=1, path="/media/MIDV-123.mp4")
+        result = await h.handle(ScrapePayload(media_file_id=media.id, number="MIDV-123", content_type=content_type))
+
+        assert result.success is True
+        metadata = await repo.get_metadata_by_number("MIDV-123")
+        assert metadata is not None
+        assert metadata.poster_urls == expected
+        # 关闭与无码时根本不调用日亚
+        assert bool(amazon.queries) is (hd_poster and content_type == ContentType.CENSORED)
+
+    @pytest.mark.asyncio(loop_scope="function")
+    async def test_hd_poster_uses_aggregated_title_for_confirmation(self, repo: Repository, resource_store):
+        amazon = AmazonPosterCrawler()
+        factory = RecordingFactory({str(SiteName.JAVDB): PosterCrawler(), str(SiteName.AMAZON): amazon})
+        config = _config_with({ContentType.CENSORED: [SiteName.JAVDB]}, hd_poster=True)
+        h = ScrapeHandler(repo=repo, factory=factory, resource_store=resource_store, pipeline_config=config)
+
+        media = await repo.create_media_file(library_id=1, path="/media/MIDV-123.mp4")
+        await h.handle(ScrapePayload(media_file_id=media.id, number="MIDV-123", content_type=ContentType.CENSORED))
+
+        assert amazon.queries[0].partial_result is not None
+        assert amazon.queries[0].partial_result.title == "Mock Title"
 
 
 class TestRawCacheWriteback:
