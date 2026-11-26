@@ -3,14 +3,23 @@ from typing import TYPE_CHECKING, Protocol
 
 from structlog.contextvars import bind_contextvars
 
-from ..aggregate import SCALAR_FIELDS, AggregatedMetadata, CrawlerLike, FieldLanguage, aggregate, compile_priority
+from ..aggregate import (
+    SCALAR_FIELDS,
+    AggregatedMetadata,
+    AggregateResult,
+    CrawlerLike,
+    FieldLanguage,
+    aggregate,
+    compile_priority,
+)
 from ..crawlers.models import SearchQuery
 from ..crawlers.site_roles import builtin_descriptors
 from ..db.models import TaskType
-from ..enums import ActorGender, MetadataField
+from ..enums import ActorGender, MetadataField, SiteName
 from ..media import materialize_images
 from ..observability import current
 from ..observability.models import SiteOutcomeKind
+from ..parsing import ContentType
 from ..plugins.models import SourceDescriptor, SourceTrait
 from ._common import ensure_oshash, finalize_media_file
 from .models import ActorScrapePayload, CacheKind, OrganizePayload, ScrapePayload, ScrapeResult
@@ -30,6 +39,7 @@ _PROGRESS_POST_STEPS = 2
 
 class CrawlerFactoryLike(Protocol):
     async def get_crawlers(self, names: Iterable[str]) -> dict[str, CrawlerLike]: ...
+    async def get(self, name: str) -> CrawlerLike | None: ...
 
 
 class ScrapeHandler(TaskHandler[ScrapePayload, ScrapeResult]):
@@ -143,6 +153,9 @@ class ScrapeHandler(TaskHandler[ScrapePayload, ScrapeResult]):
         # 获取结束: 进度分子对齐标量字段数, 其后为物化与持久化.
         await self.report_progress(len(SCALAR_FIELDS), progress_total, "fetch")
 
+        # 有码影片优先用日亚高清海报; 未命中或失败静默回退到既有候选.
+        await self._prefer_hd_poster(payload, result)
+
         # 翻译文本字段; 失败不阻断刮削.
         if self._translator is not None:
             await self._translate_metadata(result.metadata, field_language, CacheKind.trans in payload.use_cache)
@@ -231,6 +244,26 @@ class ScrapeHandler(TaskHandler[ScrapePayload, ScrapeResult]):
             ),
             followups=[*actor_followups, *organize_followups],
         )
+
+    async def _prefer_hd_poster(self, payload: ScrapePayload, result: AggregateResult) -> None:
+        """有码且开启高清海报时, 把日亚命中图放到候选首位; 任何失败都只回退, 不计入站点失败."""
+        if payload.content_type != ContentType.CENSORED or not self._config.scraping.hd_poster:
+            return
+        try:
+            crawler = await self._factory.get(str(SiteName.AMAZON))
+            if crawler is None:
+                return
+            found = await crawler.fetch(
+                SearchQuery(payload.number, content_type=payload.content_type, partial_result=result.metadata)
+            )
+        except Exception:
+            current().warning("hd poster lookup failed, keeping existing candidates", number=payload.number)
+            return
+        if found is None or not found.poster_urls:
+            return
+        hd = found.poster_urls
+        result.metadata.poster_urls = [*hd, *(url for url in result.metadata.poster_urls if url not in hd)]
+        current().info("hd poster applied", number=payload.number, posters=len(result.metadata.poster_urls))
 
     def failure_result(self, payload: ScrapePayload) -> ScrapeResult | None:
         """抓取之后崩掉时, 站点明细仍要能回答"为什么刮不到"."""
