@@ -55,6 +55,10 @@
         "label": "裁切海报",
         "description": "从封面自动裁切生成海报, 仅有码与无码生效"
       },
+      "hd_poster": {
+        "label": "高清海报",
+        "description": "有码刮削时优先使用 Amazon.co.jp 高清海报, 未命中时回退到其它来源"
+      },
       "poster_crop_skip_ratio": {
         "label": "海报裁切跳过阈值比例",
         "description": "已有海报与封面高度之比超过此值则不裁切"
@@ -90,6 +94,7 @@
         "$": {
           "options": {
             "airav": "airav",
+            "amazon": "amazon",
             "avbase": "avbase",
             "avsox": "avsox",
             "c0930": "c0930",
@@ -129,6 +134,7 @@
           "$": {
             "options": {
               "airav": "airav",
+              "amazon": "amazon",
               "avbase": "avbase",
               "avsox": "avsox",
               "c0930": "c0930",
@@ -191,6 +197,7 @@
         "$": {
           "options": {
             "airav": "airav",
+            "amazon": "amazon",
             "avbase": "avbase",
             "avsox": "avsox",
             "c0930": "c0930",
@@ -230,6 +237,7 @@
           "$": {
             "options": {
               "airav": "airav",
+              "amazon": "amazon",
               "avbase": "avbase",
               "avsox": "avsox",
               "c0930": "c0930",
@@ -302,6 +310,7 @@
         "description": "按站点单独设置",
         "options": {
           "airav": "airav",
+          "amazon": "amazon",
           "avbase": "avbase",
           "avsox": "avsox",
           "c0930": "c0930",
@@ -447,6 +456,7 @@
         "$": {
           "options": {
             "airav": "airav",
+            "amazon": "amazon",
             "avbase": "avbase",
             "avsox": "avsox",
             "c0930": "c0930",
@@ -486,6 +496,7 @@
           "$": {
             "options": {
               "airav": "airav",
+              "amazon": "amazon",
               "avbase": "avbase",
               "avsox": "avsox",
               "c0930": "c0930",

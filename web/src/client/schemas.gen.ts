@@ -3147,6 +3147,7 @@ export const HotSettingsSchema = {
                     'extrafanart'
                 ],
                 crop_poster: true,
+                hd_poster: false,
                 poster_ratio: 0.7,
                 poster_crop_skip_ratio: 0.9,
                 jpeg_quality: 95,
@@ -3240,6 +3241,18 @@ export const HotSettingsSchema = {
                         use_proxy: true
                     },
                     airav: {
+                        cookie: {},
+                        languages: [
+                            'zh',
+                            'ja',
+                            'en'
+                        ],
+                        official_routes: {},
+                        rate_limit: 2,
+                        use_browser: 'auto',
+                        use_proxy: true
+                    },
+                    amazon: {
                         cookie: {},
                         languages: [
                             'zh',
@@ -8584,6 +8597,11 @@ export const ScrapingConfigSchema = {
             title: 'Crop Poster',
             default: true
         },
+        hd_poster: {
+            type: 'boolean',
+            title: 'Hd Poster',
+            default: false
+        },
         poster_ratio: {
             type: 'number',
             maximum: 1,
@@ -8614,6 +8632,7 @@ export const ScrapingConfigSchema = {
                         '10musume',
                         '1pondo',
                         'airav',
+                        'amazon',
                         'avbase',
                         'avsox',
                         'c0930',
@@ -8664,6 +8683,7 @@ export const ScrapingConfigSchema = {
                         '10musume',
                         '1pondo',
                         'airav',
+                        'amazon',
                         'avbase',
                         'avsox',
                         'c0930',
@@ -8714,6 +8734,7 @@ export const ScrapingConfigSchema = {
                         '10musume',
                         '1pondo',
                         'airav',
+                        'amazon',
                         'avbase',
                         'avsox',
                         'c0930',
@@ -9401,6 +9422,7 @@ export const SiteNameSchema = {
         '10musume',
         '1pondo',
         'airav',
+        'amazon',
         'avbase',
         'avsox',
         'c0930',
