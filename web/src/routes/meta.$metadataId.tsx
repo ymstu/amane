@@ -893,58 +893,61 @@ function TitleDetailPage() {
         onCanSeekChange={setCanSeek}
       />
 
-      {magnets.length > 0 && (
-        <Card withBorder radius="md" p="md">
-          <Title order={5} mb="sm">
-            {t("detail.magnets")}
-          </Title>
-          <MagnetLinks magnets={magnets} />
-        </Card>
-      )}
-
       {/* 宽屏下并排, 窄屏落回上下叠放; 各自保持自然高度, 拉平会把空白挪进较短的一栏. */}
       <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md" style={{ alignItems: "start" }}>
-        <Card withBorder radius="md" p="md">
-          <Title order={5} mb="sm">
-            {t("detail.connections")}
-          </Title>
-          {data.files.length === 0 ? (
-            <Text size="sm" c="dimmed">
-              {t("detail.noFiles")}
-            </Text>
-          ) : (
-            <Stack gap={6}>
-              {data.files.map((f) => (
-                <Group key={f.id} justify="space-between" gap="xs" wrap="nowrap">
-                  <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
-                    <Text size="sm" truncate="end" ff="monospace">
-                      {f.path}
-                    </Text>
-                    <FilePhaseBadges phase={f} />
-                  </Stack>
-                  <Badge size="sm" variant="light">
-                    {f.status}
-                  </Badge>
-                  {/* 逐文件的删除只在媒体库详情页做: 这里只把人送过去, 并按该文件的路径过滤列表. */}
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    aria-label={t("detail.openInLibrary")}
-                    onClick={() =>
-                      void navigate({
-                        to: "/libraries/$libraryId",
-                        params: { libraryId: String(f.library_id) },
-                        search: { q: f.path },
-                      })
-                    }
-                  >
-                    <IconFolders size={16} />
-                  </ActionIcon>
-                </Group>
-              ))}
-            </Stack>
+        {/* 磁力链接与关联文件同宽, 紧随其后; 两卡同在一栏, 评论仍占另一栏. */}
+        <Stack gap="md">
+          <Card withBorder radius="md" p="md">
+            <Title order={5} mb="sm">
+              {t("detail.connections")}
+            </Title>
+            {data.files.length === 0 ? (
+              <Text size="sm" c="dimmed">
+                {t("detail.noFiles")}
+              </Text>
+            ) : (
+              <Stack gap={6}>
+                {data.files.map((f) => (
+                  <Group key={f.id} justify="space-between" gap="xs" wrap="nowrap">
+                    <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
+                      <Text size="sm" truncate="end" ff="monospace">
+                        {f.path}
+                      </Text>
+                      <FilePhaseBadges phase={f} />
+                    </Stack>
+                    <Badge size="sm" variant="light">
+                      {f.status}
+                    </Badge>
+                    {/* 逐文件的删除只在媒体库详情页做: 这里只把人送过去, 并按该文件的路径过滤列表. */}
+                    <ActionIcon
+                      variant="subtle"
+                      size="sm"
+                      aria-label={t("detail.openInLibrary")}
+                      onClick={() =>
+                        void navigate({
+                          to: "/libraries/$libraryId",
+                          params: { libraryId: String(f.library_id) },
+                          search: { q: f.path },
+                        })
+                      }
+                    >
+                      <IconFolders size={16} />
+                    </ActionIcon>
+                  </Group>
+                ))}
+              </Stack>
+            )}
+          </Card>
+
+          {magnets.length > 0 && (
+            <Card withBorder radius="md" p="md">
+              <Title order={5} mb="sm">
+                {t("detail.magnets")}
+              </Title>
+              <MagnetLinks magnets={magnets} />
+            </Card>
           )}
-        </Card>
+        </Stack>
 
         <CommentSection
           metadataId={id}
