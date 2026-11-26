@@ -22,6 +22,19 @@
 
 **所有影响远程仓库的变更必须经用户明确批准后才能执行.** 例如 push、合并 PR、回复 Issue、发表评论.
 
+## 发版与部署
+
+### 热更新到 NAS
+
+地址 `http://192.168.0.100:8008`, compose 部署目录 `/volume1/docker/amane`.
+这是临时热更新, 不改变镜像; 下次发版重建镜像后自然覆盖.
+
+### 发版
+
+- **不主动发版**: 不自行创建 tag、GitHub Release, 也不改版本号. 只有用户明确说「发版」或「发布 vX.Y.Z」时才打 tag 并创建 Release (Docker 镜像只在 Release 时自动构建).
+- 普通改动只提交代码; 用户未要求时不推送、不发版.
+- 用户只说「发版」时按顺序递增: v0.2.0 → v0.2.1 … → v0.2.9 → v0.3.0. 补丁位满 10 进位到次版本, 不自动进主版本; 用户指定了版本号时以其为准.
+
 ## 代码知识库
 
 位置: `docs/dev/` — 导航见 [`docs/dev/index.md`](docs/dev/index.md).
@@ -86,7 +99,7 @@ just bump-dry patch          # 预览下一版本
 ```
 
 formatter/linter 不通过时优先使用 `just fix` 自动修复, 不要手动改
-发版前更新 `CHANGELOG.md`, 只用 `just bump`, 不要手改版本或手打 tag; Android APP 的版本与 tag 独立, 见 [android.md](docs/dev/android.md)
+发版前更新 `CHANGELOG.md`, 只用 `just bump`, 不要手改版本或手打 tag; 版本号按上文「发版」规则递增, 不套用 semver 的补丁位累加. Android APP 的版本与 tag 独立, 见 [android.md](docs/dev/android.md)
 
 ## 开发规范
 
