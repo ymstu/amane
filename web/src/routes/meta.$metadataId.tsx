@@ -62,6 +62,7 @@ import { UserTagActions } from "@/components/media/user-tag-add";
 import { VrBadge } from "@/components/media/vr-badge";
 import { FanartLightbox, FanartStrip } from "@/components/media/fanart-lightbox";
 import { FilePhaseBadges, FilePhaseOverlay } from "@/components/media/file-phase-badges";
+import { MagnetLinks } from "@/components/media/magnet-links";
 import { PosterCropDialog } from "@/components/media/poster-crop-dialog";
 import { MergeDialog } from "@/components/metadata/merge-dialog";
 import { type JSONSchemaObject, resolveSchema } from "@/components/schema-form/schema";
@@ -390,6 +391,7 @@ function TitleDetailPage() {
   }
 
   const item: MetadataResponse = data.metadata;
+  const magnets = data.magnets ?? [];
   // 详情只展示一张主图: 优先横版封面 (thumb), 失败或不存在时回退竖版海报.
   const thumbSrc = item.thumb_url ?? item.thumb_urls?.[0] ?? null;
   const posterSrc = item.poster_url ?? item.poster_urls?.[0] ?? null;
@@ -890,6 +892,15 @@ function TitleDetailPage() {
         onSeekHandled={() => setSeekRequest(null)}
         onCanSeekChange={setCanSeek}
       />
+
+      {magnets.length > 0 && (
+        <Card withBorder radius="md" p="md">
+          <Title order={5} mb="sm">
+            {t("detail.magnets")}
+          </Title>
+          <MagnetLinks magnets={magnets} />
+        </Card>
+      )}
 
       {/* 宽屏下并排, 窄屏落回上下叠放; 各自保持自然高度, 拉平会把空白挪进较短的一栏. */}
       <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md" style={{ alignItems: "start" }}>
