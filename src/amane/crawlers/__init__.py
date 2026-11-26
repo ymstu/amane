@@ -16,6 +16,7 @@ from .models import FetchOptions, FilmActor, MediaMetadata, film_actors
 from .registry import registry
 from .sites import (
     AiravCrawler,
+    AmazonCrawler,
     AvbaseCrawler,
     AvsoxCrawler,
     C0930Crawler,
@@ -59,6 +60,7 @@ registry.register(JavLibraryCrawler)
 registry.register(FreejavbtCrawler)
 registry.register(Jav321Crawler)
 registry.register(AiravCrawler)
+registry.register(AmazonCrawler)
 registry.register(AvsoxCrawler)
 registry.register(CaribbeanComCrawler)
 registry.register(OnePondoCrawler)
@@ -90,6 +92,7 @@ __all__ = [
     "ActorCrawler",
     "ActorMetadata",
     "AiravCrawler",
+    "AmazonCrawler",
     "AvbaseActorCrawler",
     "AvbaseCrawler",
     "AvsoxCrawler",

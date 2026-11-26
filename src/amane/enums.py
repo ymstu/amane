@@ -7,6 +7,7 @@ class SiteName(StrEnum):
     TENMUSUME = "10musume"
     ONEPONDO = "1pondo"
     AIRAV = "airav"
+    AMAZON = "amazon"
     AVBASE = "avbase"
     AVSOX = "avsox"
     C0930 = "c0930"

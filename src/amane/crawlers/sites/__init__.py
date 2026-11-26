@@ -1,4 +1,5 @@
 from .airav import AiravCrawler
+from .amazon import AmazonCrawler
 from .avbase import AvbaseCrawler
 from .avsox import AvsoxCrawler
 from .caribbeancom import CaribbeanComCrawler
@@ -35,6 +36,7 @@ from .xcity import XCityCrawler
 
 __all__ = [
     "AiravCrawler",
+    "AmazonCrawler",
     "AvbaseCrawler",
     "AvsoxCrawler",
     "C0930Crawler",
